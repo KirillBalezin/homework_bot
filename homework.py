@@ -1,12 +1,11 @@
 import logging
 import os
-import time
 import sys
-
-import requests
+import time
 
 from dotenv import load_dotenv
-
+from logging.handlers import RotatingFileHandler
+import requests
 import telegram
 
 load_dotenv()
@@ -34,6 +33,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
+handler = RotatingFileHandler('logger.log', maxBytes=5000000, backupCount=5)
+logger.addHandler(handler)
 
 
 def check_tokens():
@@ -41,17 +42,20 @@ def check_tokens():
     tokens = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
     for token in tokens:
         if token is None:
-            raise logger.critical(
-                f'Отсутствует обязательная переменная окружения: {token}')
+            message = (f'Отсутствует переменная окружения: {token}')
+            logger.critical(message, exc_info=True)
+            raise ValueError(message)
 
 
 def send_message(bot, message):
     """Отправка сообщения в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.debug(f'Сообщение отправлено: "{message}"')
-    except telegram.error.TelegramError as error:
-        raise logger.error(f'Не удалось отправить сообщение: "{error}"')
+        logger.debug(f'Сообщение отправлено: "{message}"', exc_info=True)
+    except Exception as error:
+        message = (f'Не удалось отправить сообщение: "{error}"')
+        logger.error(message, exc_info=True)
+        raise Warning(message)
 
 
 def get_api_answer(timestamp):
@@ -60,35 +64,55 @@ def get_api_answer(timestamp):
         response = requests.get(
             ENDPOINT, headers=HEADERS, params={'from_date': timestamp})
     except Exception as error:
-        raise logger.error(f'Ошибка при запросе к основному API: {error}')
+        message = f'Ошибка при запросе к основному API: {error}'
+        logger.error(message, exc_info=True)
+        raise Warning(message)
     if response.status_code != 200:
-        raise logger.error(f'Ошибка при запросе к API: {response.status_code}')
-    return response.json()
+        message = f'Ошибка при запросе к API: {response.status_code}'
+        logger.error(message, exc_info=True)
+        raise Warning(message)
+    try:
+        return response.json()
+    except Exception as error:
+        message = f'Ошибка преобразования json: {error}'
+        logger.error(message)
+        raise TypeError(message)
 
 
 def check_response(response):
     """Проверка ответа API на соответствие документации."""
     if type(response) != dict:
-        raise logger.error('Неожиданный тип данных в ответе API.')
+        message = 'Неожиданный тип данных в ответе API.'
+        logger.error(message, exc_info=True)
+        raise TypeError(message)
     if 'homeworks' not in response:
-        raise logger.error('Ключ "homeworks" отсутствует')
+        message = 'Ключ "homeworks" отсутствует'
+        logger.error(message, exc_info=True)
+        raise KeyError(message)
     homeworks = response['homeworks']
     if type(homeworks) != list:
-        raise logger.error('"homeworks" приходят не в виде списка')
+        message = '"homeworks" приходят не в виде списка'
+        logger.error(message, exc_info=True)
+        raise TypeError(message)
     return homeworks
 
 
 def parse_status(homework):
     """Извлечение статуса работы."""
     if 'homework_name' not in homework:
-        raise logger.error('homework_name недоступно')
+        message = 'homework_name недоступно'
+        logger.error(message, exc_info=True)
+        raise KeyError(message)
     if 'status' not in homework:
-        raise logger.error('status недоступно')
+        message = 'status недоступно'
+        logger.error(message, exc_info=True)
+        raise KeyError(message)
     homework_name = homework['homework_name']
     homework_status = homework['status']
     if homework_status not in HOMEWORK_VERDICTS:
-        raise logger.error(
-            f'Неожиданный статус домашней работы: {homework_status}')
+        message = f'Неожиданный статус домашней работы: {homework_status}'
+        logger.error(message, exc_info=True)
+        raise ValueError(message)
     verdict = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
