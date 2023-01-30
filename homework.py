@@ -73,7 +73,6 @@ def get_api_answer(timestamp):
         logger.error(message, exc_info=True)
         raise Warning(message)
     try:
-        print(response.json())
         return response.json()
     except Exception as error:
         message = f'Ошибка преобразования json: {error}'
