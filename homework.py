@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
-handler = RotatingFileHandler('logger.log', maxBytes=5000000, backupCount=5)
+handler = RotatingFileHandler(
+    os.path.expanduser('~/logger.log'), maxBytes=50000000, backupCount=5)
 logger.addHandler(handler)
 
 
@@ -52,10 +53,10 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.debug(f'Сообщение отправлено: "{message}"', exc_info=True)
-    except Exception as error:
+    except telegram.error.TelegramError as error:
         message = (f'Не удалось отправить сообщение: "{error}"')
         logger.error(message, exc_info=True)
-        raise Warning(message)
+        raise telegram.error.TelegramError(message)
 
 
 def get_api_answer(timestamp):
@@ -72,6 +73,7 @@ def get_api_answer(timestamp):
         logger.error(message, exc_info=True)
         raise Warning(message)
     try:
+        print(response.json())
         return response.json()
     except Exception as error:
         message = f'Ошибка преобразования json: {error}'
