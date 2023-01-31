@@ -4,7 +4,7 @@ class TelegrammError(Exception):
     pass
 
 
-class GetApiAnswerError(Exception):
+class GetApiAnswerError(ConnectionError):
     """Ошибка при запросе к API."""
 
     pass

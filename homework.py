@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 import requests
 import telegram
 
-import exceptions
+from exceptions import TelegrammError, GetApiAnswerError
 
 load_dotenv()
 
@@ -58,7 +58,7 @@ def send_message(bot, message):
     except telegram.error.TelegramError as error:
         message = (f'Не удалось отправить сообщение: "{error}"')
         logger.error(message, exc_info=True)
-        raise exceptions.TelegrammError(message)
+        raise TelegrammError(message)
 
 
 def get_api_answer(timestamp):
@@ -69,11 +69,11 @@ def get_api_answer(timestamp):
     except Exception as error:
         message = f'Ошибка при запросе к основному API: {error}'
         logger.error(message, exc_info=True)
-        raise exceptions.GetApiAnswerError(message)
+        raise GetApiAnswerError(message)
     if response.status_code != 200:
         message = f'Ошибка при запросе к API: {response.status_code}'
         logger.error(message, exc_info=True)
-        raise exceptions.GetApiAnswerError(message)
+        raise GetApiAnswerError(message)
     try:
         return response.json()
     except Exception as error:
